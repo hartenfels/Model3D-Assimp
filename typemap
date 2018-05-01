@@ -1,0 +1,86 @@
+TYPEMAP
+
+aiBone *            T_aiBonePtr
+aiMatrix4x4 *       T_aiMatrix4x4Ptr
+aiMesh *            T_aiMeshPtr
+aiNode *            T_aiNodePtr
+aiPropertyStore *   T_aiPropertyStorePtr
+const aiScene *     T_aiScenePtr
+aiString            T_aiString
+aiString *          T_aiStringPtr
+ParentedBone *      T_ParentedBonePtr
+ParentedNode *      T_ParentedNodePtr
+ParentedMesh *      T_ParentedMeshPtr
+SceneWrap *         T_SceneWrapPtr
+
+
+INPUT
+
+T_aiBonePtr
+    $var = (aiBone *)((Parented *)unwrap_obj(PKG_BONE, $arg))->ptr;
+
+T_aiMeshPtr
+    $var = (aiMesh *)((Parented *)unwrap_obj(PKG_MESH, $arg))->ptr;
+
+T_aiNodePtr
+    $var = (aiNode *)((Parented *)unwrap_obj(PKG_NODE, $arg))->ptr;
+
+T_aiPropertyStorePtr
+    $var = (aiPropertyStore *)unwrap_obj(PKG_PROPERTIES, $arg)
+
+T_aiScenePtr
+    $var = ((SceneWrap *)unwrap_obj(PKG_SCENE, $arg))->scene;
+
+T_aiString
+    do {
+        char *_s = SvPV($arg, $var.length);
+        if ($var.length >= MAXLEN) {
+            croak(\"Argument '$var' too long for aiString\");
+        }
+        Copy(_s, $var.data, $var.length + 1, char);
+    } while (0)
+
+T_ParentedBonePtr
+    $var = (ParentedBone *)unwrap_obj(PKG_BONE, $arg)
+
+T_ParentedMeshPtr
+    $var = (ParentedMesh *)unwrap_obj(PKG_MESH, $arg)
+
+T_ParentedNodePtr
+    $var = (ParentedNode *)unwrap_obj(PKG_NODE, $arg)
+
+T_SceneWrapPtr
+    $var = (SceneWrap *)unwrap_obj(PKG_SCENE, $arg)
+
+
+OUTPUT
+
+T_aiMatrix4x4Ptr
+    if ($var) {
+        sv_setsv($arg, sv_2mortal(from_ai_matrix4x4($var)));
+    }
+
+T_aiMeshPtr
+    if ($var) {
+        sv_setref_iv($arg, PKG_MESH, PTR2IV(parented_new($var, parent)));
+    }
+
+T_aiNodePtr
+    if ($var) {
+        sv_setref_iv($arg, PKG_NODE, PTR2IV(parented_new($var, parent)));
+    }
+
+T_aiPropertyStorePtr
+    if ($var) {
+        sv_setref_iv($arg, PKG_PROPERTIES, PTR2IV($var));
+    }
+
+T_aiStringPtr
+    if ($var) {
+        sv_setpvn($arg, $var->data, $var->length);
+    }
+
+T_SceneWrapPtr
+    if ($var) {
+        sv_setref_iv($arg, PKG_SCENE, PTR2IV($var));
+    }

@@ -1,0 +1,5 @@
+/.build
+/.vscode
+/Model3D-Assimp-*
+*.bak
+*~
