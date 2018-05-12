@@ -4,6 +4,7 @@ package Model3D::Assimp::Scene;
 use strict;
 use warnings;
 use Carp qw(croak);
+use Math::Trig qw(deg2rad);
 use Model3D::Assimp::XS qw(:constants);
 use Model3D::Assimp::Mesh;
 use Model3D::Assimp::Node;
@@ -138,6 +139,18 @@ sub apply_split_by_bone_count {
 
 sub apply_debone {
     return shift->_apply_pp(aiProcess_Debone);
+}
+
+
+sub rotate_rad {
+    my ($self, @args) = @_;
+    Model3D::Assimp::XS::scene_rotate($self, @args);
+    return $self;
+}
+
+sub rotate_deg {
+    my ($self, @args) = @_;
+    return $self->rotate_rad(map { deg2rad($_) } @args);
 }
 
 

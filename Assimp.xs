@@ -335,6 +335,65 @@ static SV *wrap_all_texture_coords(aiVector3D *uvs, unsigned int length,
     CHECK_INDEX(INDEX, AI_MAX_NUMBER_OF_TEXTURECOORDS, "Texture coordinate")
 
 
+void matrix4x4_from_euler_angles(aiMatrix4x4 *m, float x, float y, float z)
+{
+    float cr   = cosf(x);
+    float sr   = sinf(x);
+    float cp   = cosf(y);
+    float sp   = sinf(y);
+    float cy   = cosf(z);
+    float sy   = sinf(z);
+    float srsp = sr * sp;
+    float crsp = cr * sp;
+
+    m->a1 = cp * cy;
+    m->a2 = cp * sy;
+    m->a3 = -sp;
+
+    m->b1 = srsp * cy - cr * sy;
+    m->b2 = srsp * sy + cr * cy;
+    m->b3 = sr * cp;
+
+    m->c1 = crsp * cy + sr * sy;
+    m->c2 = crsp * sy - sr * cy;
+    m->c3 = cr * cp;
+}
+
+void correct_vec3d(aiMatrix4x4 *m, aiVector3D *vec)
+{
+    float x = vec->x, y = vec->y, z = vec->z;
+    vec->x = m->a1 * x + m->a2 * y + m->a3 * z + m->a4;
+    vec->y = m->b1 * x + m->b2 * y + m->b3 * z + m->b4;
+    vec->z = m->c1 * x + m->c2 * y + m->c3 * z + m->c4;
+}
+
+void correct_vec3ds(aiMatrix4x4 *m, unsigned int num, aiVector3D *vecs)
+{
+    if (vecs) {
+        unsigned int i;
+        for (i = 0; i < num; ++i) {
+            correct_vec3d(m, &vecs[i]);
+        }
+    }
+}
+
+void correct_mesh(aiMatrix4x4 *m, aiMesh *mesh)
+{
+    correct_vec3ds(m, mesh->mNumVertices, mesh->mVertices);
+    correct_vec3ds(m, mesh->mNumVertices, mesh->mNormals);
+}
+
+void correct_meshes(aiMatrix4x4 *m, unsigned int num, aiMesh **meshes)
+{
+    if (meshes) {
+        unsigned int i;
+        for (i = 0; i < num; ++i) {
+            correct_mesh(m, meshes[i]);
+        }
+    }
+}
+
+
 #define PKG_PREFIX     "Model3D::Assimp::"
 #define PKG_XS         PKG_PREFIX "XS"
 #define PKG_BONE       PKG_PREFIX "Bone"
@@ -454,6 +513,15 @@ scene_root_node(SceneWrap *parent)
         RETVAL = parent->scene->mRootNode;
     OUTPUT:
         RETVAL
+
+void
+scene_rotate(const aiScene *self, float x, float y, float z)
+    PREINIT:
+        aiMatrix4x4 m;
+    CODE:
+        matrix4x4_from_euler_angles(&m, x, y, z);
+        correct_meshes(&m, self->mNumMeshes, self->mMeshes);
+
 
 bool
 aiApplyPostProcessing(const aiScene *self, unsigned int ppflags)
@@ -615,6 +683,14 @@ mesh_all_num_uv_components(aiMesh *self)
     PPCODE:
         WRAP_ARRAY(unsigned int, self->mNumUVComponents,
                    AI_MAX_NUMBER_OF_TEXTURECOORDS, newSVuv(*elem));
+
+void
+mesh_rotate(aiMesh *self, float x, float y, float z)
+    PREINIT:
+        aiMatrix4x4 matrix;
+    CODE:
+        matrix4x4_from_euler_angles(&matrix, x, y, z);
+        correct_mesh(&matrix, self);
 
 
 void

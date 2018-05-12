@@ -3,6 +3,7 @@ package Model3D::Assimp::Mesh;
 # ABSTRACT: Assimp mesh
 use strict;
 use warnings;
+use Math::Trig qw(deg2rad);
 use Model3D::Assimp::XS;
 use Model3D::Assimp::Bone;
 
@@ -44,6 +45,18 @@ sub texture_coords {
 sub num_uv_components {
     return @_ > 1 ? Model3D::Assimp::XS::mesh_num_uv_components(@_)
                   : Model3D::Assimp::XS::mesh_all_num_uv_components(@_);
+}
+
+
+sub rotate_rad {
+    my ($self, @args) = @_;
+    Model3D::Assimp::XS::mesh_rotate($self, @args);
+    return $self;
+}
+
+sub rotate_deg {
+    my ($self, @args) = @_;
+    return $self->rotate_rad(map { deg2rad($_) } @args);
 }
 
 
