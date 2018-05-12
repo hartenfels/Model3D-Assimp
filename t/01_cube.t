@@ -45,6 +45,7 @@ sub sizes_ok {
     my $call   = sprintf '%s->%s(%s)', $title, $method, join ', ', @args;
 
     if (defined $size) {
+        ok defined $scalar, "scalar $call is defined";
         cmp_ok $scalar, '==', $size, "scalar $call gives $size";
     }
     else {
@@ -72,12 +73,12 @@ is_deeply [$mesh->faces], [map { [$_ * 3, $_ * 3 + 1, $_ * 3 + 2] } 0 .. 11],
 sizes_ok $mesh, 'vertices', 36, 'cube';
 sizes_ok $mesh, 'normals',  36, 'cube';
 
-sizes_ok $mesh, 'bitangents', undef, 'cube';
-sizes_ok $mesh, 'tangents',   undef, 'cube';
-sizes_ok $mesh, 'bones',      undef, 'cube';
-sizes_ok $mesh, 'colors',     undef, 'cube', 0;
+sizes_ok $mesh, 'bitangents',     undef, 'cube';
+sizes_ok $mesh, 'tangents',       undef, 'cube';
+sizes_ok $mesh, 'bones',          undef, 'cube';
+sizes_ok $mesh, 'colors',         undef, 'cube', 0;
+sizes_ok $mesh, 'texture_coords', undef, 'cube', 0;
 
-sizes_ok $mesh, 'texture_coords', 0, 'cube', 0;
 cmp_ok $mesh->num_uv_components(0), '==', 0,
        'cube uv components count is zero';
 
