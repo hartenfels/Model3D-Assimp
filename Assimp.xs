@@ -19,6 +19,8 @@ typedef struct aiMatrix4x4     aiMatrix4x4;
 typedef struct aiMesh          aiMesh;
 typedef struct aiMeshAnim      aiMeshAnim;
 typedef struct aiMeshKey       aiMeshKey;
+typedef struct aiMeshMorphAnim aiMeshMorphAnim;
+typedef struct aiMeshMorphKey  aiMeshMorphKey;
 typedef struct aiNode          aiNode;
 typedef struct aiNodeAnim      aiNodeAnim;
 typedef struct aiPropertyStore aiPropertyStore;
@@ -56,6 +58,7 @@ typedef struct Parented ParentedNode;
 typedef struct Parented ParentedNodeAnim;
 typedef struct Parented ParentedMesh;
 typedef struct Parented ParentedMeshAnim;
+typedef struct Parented ParentedMeshMorphAnim;
 
 static inline SceneWrap *sw_new(const aiScene *scene)
 {
@@ -252,6 +255,33 @@ static SV *from_ai_mesh_key(aiMeshKey *mk)
         HV *hv = newHV();
         hv_stores(hv, "time",  newSVnv(mk->mTime));
         hv_stores(hv, "value", newSVuv(mk->mValue));
+        return newRV_noinc((SV *)hv);
+    }
+    else {
+        return newSV(0);
+    }
+}
+
+static SV *collect_ai_mesh_morph_values(aiMeshMorphKey *mmk)
+{
+    unsigned int i;
+    AV *av = newAV();
+    av_extend(av, mmk->mNumValuesAndWeights);
+    for (i = 0; i < mmk->mNumValuesAndWeights; ++i) {
+        HV *hv = newHV();
+        hv_stores(hv, "value",  newSVuv(mmk->mValues [i]));
+        hv_stores(hv, "weight", newSVnv(mmk->mWeights[i]));
+        av_push(av, newRV_noinc((SV *)av));
+    }
+    return newRV_noinc((SV *)av);
+}
+
+static SV *from_ai_mesh_morph_key(aiMeshMorphKey *mmk)
+{
+    if (mmk) {
+        HV *hv = newHV();
+        hv_stores(hv, "time",   newSVnv(mmk->mTime));
+        hv_stores(hv, "values", collect_ai_mesh_morph_values(mmk));
         return newRV_noinc((SV *)hv);
     }
     else {
@@ -460,16 +490,17 @@ void correct_meshes(aiMatrix4x4 *m, unsigned int num, aiMesh **meshes)
 }
 
 
-#define PKG_PREFIX     "Model3D::Assimp::"
-#define PKG_XS         PKG_PREFIX "XS"
-#define PKG_ANIMATION  PKG_PREFIX "Animation"
-#define PKG_BONE       PKG_PREFIX "Bone"
-#define PKG_MESH       PKG_PREFIX "Mesh"
-#define PKG_MESH_ANIM  PKG_PREFIX "MeshAnim"
-#define PKG_NODE       PKG_PREFIX "Node"
-#define PKG_NODE_ANIM  PKG_PREFIX "NodeAnim"
-#define PKG_PROPERTIES PKG_PREFIX "Properties"
-#define PKG_SCENE      PKG_PREFIX "Scene"
+#define PKG_PREFIX          "Model3D::Assimp::"
+#define PKG_XS              PKG_PREFIX "XS"
+#define PKG_ANIMATION       PKG_PREFIX "Animation"
+#define PKG_BONE            PKG_PREFIX "Bone"
+#define PKG_MESH            PKG_PREFIX "Mesh"
+#define PKG_MESH_ANIM       PKG_PREFIX "MeshAnim"
+#define PKG_MESH_MORPH_ANIM PKG_PREFIX "MeshAnim"
+#define PKG_NODE            PKG_PREFIX "Node"
+#define PKG_NODE_ANIM       PKG_PREFIX "NodeAnim"
+#define PKG_PROPERTIES      PKG_PREFIX "Properties"
+#define PKG_SCENE           PKG_PREFIX "Scene"
 
 
 /*
@@ -839,24 +870,15 @@ animation_mesh_channels(ParentedAnimation *self)
         WRAP_ARRAY(aiMeshAnim *, anim->mMeshChannels, anim->mNumMeshChannels,
                    from_parented(PKG_MESH_ANIM, *elem, self->parent));
 
-
 void
-mesh_anim_destroy(ParentedMeshAnim *self)
-    CODE:
-        parented_destroy(self);
-
-aiString *
-mesh_anim_name(aiMeshAnim *self)
-    CODE:
-        RETVAL = &self->mName;
-    OUTPUT:
-        RETVAL
-
-void
-mesh_anim_keys(aiMeshAnim *self)
+animation_morph_mesh_channels(ParentedAnimation *self)
+    PREINIT:
+        aiAnimation *anim;
     PPCODE:
-        WRAP_ARRAY(aiMeshKey, self->mKeys, self->mNumKeys,
-                   from_ai_mesh_key(elem));
+        anim = (aiAnimation *)self->ptr;
+        WRAP_ARRAY(aiMeshMorphAnim *, anim->mMorphMeshChannels,
+                   anim->mNumMorphMeshChannels,
+                   from_parented(PKG_MESH_MORPH_ANIM, *elem, self->parent));
 
 
 void
@@ -902,6 +924,44 @@ node_anim_scaling_keys(aiNodeAnim *self)
     PPCODE:
         WRAP_ARRAY(aiVectorKey, self->mScalingKeys, self->mNumScalingKeys,
                    from_ai_vector_key(elem));
+
+
+void
+mesh_anim_destroy(ParentedMeshAnim *self)
+    CODE:
+        parented_destroy(self);
+
+aiString *
+mesh_anim_name(aiMeshAnim *self)
+    CODE:
+        RETVAL = &self->mName;
+    OUTPUT:
+        RETVAL
+
+void
+mesh_anim_keys(aiMeshAnim *self)
+    PPCODE:
+        WRAP_ARRAY(aiMeshKey, self->mKeys, self->mNumKeys,
+                   from_ai_mesh_key(elem));
+
+
+void
+mesh_morph_anim_destroy(ParentedMeshMorphAnim *self)
+    CODE:
+        parented_destroy(self);
+
+aiString *
+mesh_morph_anim_name(aiMeshMorphAnim *self)
+    CODE:
+        RETVAL = &self->mName;
+    OUTPUT:
+        RETVAL
+
+void
+mesh_morph_anim_keys(aiMeshMorphAnim *self)
+    PPCODE:
+        WRAP_ARRAY(aiMeshMorphKey, self->mKeys, self->mNumKeys,
+                   from_ai_mesh_morph_key(elem));
 
 
 BOOT:
