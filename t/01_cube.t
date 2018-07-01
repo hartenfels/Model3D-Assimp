@@ -96,4 +96,7 @@ is_deeply [$mesh->num_uv_components], [(0) x AI_MAX_NUMBER_OF_TEXTURECOORDS],
           'cube num_uv_components are AI_MAX_NUMBER_OF_TEXTURECOORDS zeros';
 
 
+sizes_ok $scene, 'animations', undef, 'cube';
+
+
 done_testing;

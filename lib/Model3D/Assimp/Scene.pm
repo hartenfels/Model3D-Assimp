@@ -8,14 +8,16 @@ use Math::Trig qw(deg2rad);
 use Model3D::Assimp::XS qw(:constants);
 use Model3D::Assimp::Mesh;
 use Model3D::Assimp::Node;
+use Model3D::Assimp::Animation;
 
 BEGIN {
     Model3D::Assimp::XS::_alias __PACKAGE__, qw(
-        new       aiImportFileExWithProperties
-        DESTROY   scene_destroy
-        flags     scene_flags
-        meshes    scene_meshes
-        root_node scene_root_node
+        new        aiImportFileExWithProperties
+        DESTROY    scene_destroy
+        flags      scene_flags
+        meshes     scene_meshes
+        root_node  scene_root_node
+        animations scene_animations
     );
 }
 

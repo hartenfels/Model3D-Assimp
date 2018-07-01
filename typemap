@@ -1,20 +1,30 @@
 TYPEMAP
 
+aiAnimBehaviour     T_IV
+aiAnimation *       T_aiAnimationPtr
 aiBone *            T_aiBonePtr
 aiMatrix4x4 *       T_aiMatrix4x4Ptr
 aiMesh *            T_aiMeshPtr
+aiMeshAnim *        T_aiMeshAnimPtr
 aiNode *            T_aiNodePtr
+aiNodeAnim *        T_aiNodeAnimPtr
 aiPropertyStore *   T_aiPropertyStorePtr
 const aiScene *     T_aiScenePtr
 aiString            T_aiString
 aiString *          T_aiStringPtr
+ParentedAnimation * T_ParentedAnimationPtr
 ParentedBone *      T_ParentedBonePtr
-ParentedNode *      T_ParentedNodePtr
 ParentedMesh *      T_ParentedMeshPtr
+ParentedMeshAnim *  T_ParentedMeshAnimPtr
+ParentedNode *      T_ParentedNodePtr
+ParentedNodeAnim *  T_ParentedNodeAnimPtr
 SceneWrap *         T_SceneWrapPtr
 
 
 INPUT
+
+T_aiAnimationPtr
+    $var = (aiAnimation *)((Parented *)unwrap_obj(PKG_ANIMATION, $arg))->ptr;
 
 T_aiBonePtr
     $var = (aiBone *)((Parented *)unwrap_obj(PKG_BONE, $arg))->ptr;
@@ -22,8 +32,14 @@ T_aiBonePtr
 T_aiMeshPtr
     $var = (aiMesh *)((Parented *)unwrap_obj(PKG_MESH, $arg))->ptr;
 
+T_aiMeshAnimPtr
+    $var = (aiMeshAnim *)((Parented *)unwrap_obj(PKG_MESH_ANIM, $arg))->ptr;
+
 T_aiNodePtr
     $var = (aiNode *)((Parented *)unwrap_obj(PKG_NODE, $arg))->ptr;
+
+T_aiNodeAnimPtr
+    $var = (aiNodeAnim *)((Parented *)unwrap_obj(PKG_NODE_ANIM, $arg))->ptr;
 
 T_aiPropertyStorePtr
     $var = (aiPropertyStore *)unwrap_obj(PKG_PROPERTIES, $arg)
@@ -40,14 +56,23 @@ T_aiString
         Copy(_s, $var.data, $var.length + 1, char);
     } while (0)
 
+T_ParentedAnimationPtr
+    $var = (ParentedAnimation *)unwrap_obj(PKG_ANIMATION, $arg)
+
 T_ParentedBonePtr
     $var = (ParentedBone *)unwrap_obj(PKG_BONE, $arg)
 
 T_ParentedMeshPtr
     $var = (ParentedMesh *)unwrap_obj(PKG_MESH, $arg)
 
+T_ParentedMeshAnimPtr
+    $var = (ParentedMeshAnim *)unwrap_obj(PKG_MESH_ANIM, $arg)
+
 T_ParentedNodePtr
     $var = (ParentedNode *)unwrap_obj(PKG_NODE, $arg)
+
+T_ParentedNodeAnimPtr
+    $var = (ParentedNodeAnim *)unwrap_obj(PKG_NODE_ANIM, $arg)
 
 T_SceneWrapPtr
     $var = (SceneWrap *)unwrap_obj(PKG_SCENE, $arg)

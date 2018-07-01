@@ -10,16 +10,24 @@
 #include <assimp/scene.h>
 #include <assimp/version.h>
 
+typedef enum   aiAnimBehaviour aiAnimBehaviour;
+typedef struct aiAnimation     aiAnimation;
 typedef struct aiBone          aiBone;
 typedef struct aiColor4D       aiColor4D;
 typedef struct aiFace          aiFace;
 typedef struct aiMatrix4x4     aiMatrix4x4;
 typedef struct aiMesh          aiMesh;
+typedef struct aiMeshAnim      aiMeshAnim;
+typedef struct aiMeshKey       aiMeshKey;
 typedef struct aiNode          aiNode;
+typedef struct aiNodeAnim      aiNodeAnim;
 typedef struct aiPropertyStore aiPropertyStore;
+typedef struct aiQuaternion    aiQuaternion;
+typedef struct aiQuatKey       aiQuatKey;
 typedef struct aiScene         aiScene;
 typedef struct aiString        aiString;
 typedef struct aiVector3D      aiVector3D;
+typedef struct aiVectorKey     aiVectorKey;
 typedef struct aiVertexWeight  aiVertexWeight;
 
 
@@ -42,9 +50,12 @@ typedef struct Parented {
 } Parented;
 
 /* For the typemap. */
+typedef struct Parented ParentedAnimation;
 typedef struct Parented ParentedBone;
 typedef struct Parented ParentedNode;
+typedef struct Parented ParentedNodeAnim;
 typedef struct Parented ParentedMesh;
+typedef struct Parented ParentedMeshAnim;
 
 static inline SceneWrap *sw_new(const aiScene *scene)
 {
@@ -175,6 +186,22 @@ static SV *from_ai_matrix4x4(aiMatrix4x4 *m)
     }
 }
 
+static SV *from_ai_quaternion(aiQuaternion *quat)
+{
+    if (quat) {
+        AV *av = newAV();
+        av_extend(av, 4);
+        av_push(av, newSVnv(quat->w));
+        av_push(av, newSVnv(quat->x));
+        av_push(av, newSVnv(quat->y));
+        av_push(av, newSVnv(quat->z));
+        return newRV_noinc((SV *)av);
+    }
+    else {
+        return newSV(0);
+    }
+}
+
 static SV *from_ai_vector3d_n(aiVector3D *vec, unsigned int n)
 {
     if (n > 3) {
@@ -215,6 +242,45 @@ static SV *from_ai_vertex_weight(aiVertexWeight *vw)
         return newRV_noinc((SV *)hv);
     }
     else  {
+        return newSV(0);
+    }
+}
+
+static SV *from_ai_mesh_key(aiMeshKey *mk)
+{
+    if (mk) {
+        HV *hv = newHV();
+        hv_stores(hv, "time",  newSVnv(mk->mTime));
+        hv_stores(hv, "value", newSVuv(mk->mValue));
+        return newRV_noinc((SV *)hv);
+    }
+    else {
+        return newSV(0);
+    }
+}
+
+static SV *from_ai_vector_key(aiVectorKey *vk)
+{
+    if (vk) {
+        HV *hv = newHV();
+        hv_stores(hv, "time",  newSVnv(vk->mTime));
+        hv_stores(hv, "value", from_ai_vector3d(&vk->mValue));
+        return newRV_noinc((SV *)hv);
+    }
+    else {
+        return newSV(0);
+    }
+}
+
+static SV *from_ai_quat_key(aiQuatKey *qk)
+{
+    if (qk) {
+        HV *hv = newHV();
+        hv_stores(hv, "time",  newSVnv(qk->mTime));
+        hv_stores(hv, "value", from_ai_quaternion(&qk->mValue));
+        return newRV_noinc((SV *)hv);
+    }
+    else {
         return newSV(0);
     }
 }
@@ -396,9 +462,12 @@ void correct_meshes(aiMatrix4x4 *m, unsigned int num, aiMesh **meshes)
 
 #define PKG_PREFIX     "Model3D::Assimp::"
 #define PKG_XS         PKG_PREFIX "XS"
+#define PKG_ANIMATION  PKG_PREFIX "Animation"
 #define PKG_BONE       PKG_PREFIX "Bone"
 #define PKG_MESH       PKG_PREFIX "Mesh"
+#define PKG_MESH_ANIM  PKG_PREFIX "MeshAnim"
 #define PKG_NODE       PKG_PREFIX "Node"
+#define PKG_NODE_ANIM  PKG_PREFIX "NodeAnim"
 #define PKG_PROPERTIES PKG_PREFIX "Properties"
 #define PKG_SCENE      PKG_PREFIX "Scene"
 
@@ -500,6 +569,13 @@ scene_flags(const aiScene *self)
         RETVAL = self->mFlags;
     OUTPUT:
         RETVAL
+
+void
+scene_animations(SceneWrap *self)
+    PPCODE:
+        WRAP_ARRAY(aiAnimation *, self->scene->mAnimations,
+                   self->scene->mNumAnimations,
+                   from_parented(PKG_ANIMATION, *elem, self));
 
 void
 scene_meshes(SceneWrap *self)
@@ -718,6 +794,116 @@ bone_weights(aiBone *self)
         WRAP_ARRAY(aiVertexWeight, self->mWeights, self->mNumWeights,
                    from_ai_vertex_weight(elem));
 
+
+void
+animation_destroy(ParentedAnimation *self)
+    CODE:
+        parented_destroy(self);
+
+aiString *
+animation_name(aiAnimation *self)
+    CODE:
+        RETVAL = &self->mName;
+    OUTPUT:
+        RETVAL
+
+double
+animation_duration(aiAnimation *self)
+    CODE:
+        RETVAL = self->mDuration;
+    OUTPUT:
+        RETVAL
+
+double
+animation_ticks_per_second(aiAnimation *self)
+    CODE:
+        RETVAL = self->mTicksPerSecond;
+    OUTPUT:
+        RETVAL
+
+void
+animation_channels(ParentedAnimation *self)
+    PREINIT:
+        aiAnimation *anim;
+    PPCODE:
+        anim = (aiAnimation *)self->ptr;
+        WRAP_ARRAY(aiNodeAnim *, anim->mChannels, anim->mNumChannels,
+                   from_parented(PKG_NODE_ANIM, *elem, self->parent));
+
+void
+animation_mesh_channels(ParentedAnimation *self)
+    PREINIT:
+        aiAnimation *anim;
+    PPCODE:
+        anim = (aiAnimation *)self->ptr;
+        WRAP_ARRAY(aiMeshAnim *, anim->mMeshChannels, anim->mNumMeshChannels,
+                   from_parented(PKG_MESH_ANIM, *elem, self->parent));
+
+
+void
+mesh_anim_destroy(ParentedMeshAnim *self)
+    CODE:
+        parented_destroy(self);
+
+aiString *
+mesh_anim_name(aiMeshAnim *self)
+    CODE:
+        RETVAL = &self->mName;
+    OUTPUT:
+        RETVAL
+
+void
+mesh_anim_keys(aiMeshAnim *self)
+    PPCODE:
+        WRAP_ARRAY(aiMeshKey, self->mKeys, self->mNumKeys,
+                   from_ai_mesh_key(elem));
+
+
+void
+node_anim_destroy(ParentedNodeAnim *self)
+    CODE:
+        parented_destroy(self);
+
+aiString *
+node_anim_node_name(aiNodeAnim *self)
+    CODE:
+        RETVAL = &self->mNodeName;
+    OUTPUT:
+        RETVAL
+
+aiAnimBehaviour
+node_anim_pre_state(aiNodeAnim *self)
+    CODE:
+        RETVAL = self->mPreState;
+    OUTPUT:
+        RETVAL
+
+aiAnimBehaviour
+node_anim_post_state(aiNodeAnim *self)
+    CODE:
+        RETVAL = self->mPostState;
+    OUTPUT:
+        RETVAL
+
+void
+node_anim_position_keys(aiNodeAnim *self)
+    PPCODE:
+        WRAP_ARRAY(aiVectorKey, self->mPositionKeys, self->mNumPositionKeys,
+                   from_ai_vector_key(elem));
+
+void
+node_anim_rotation_keys(aiNodeAnim *self)
+    PPCODE:
+        WRAP_ARRAY(aiQuatKey, self->mRotationKeys, self->mNumRotationKeys,
+                   from_ai_quat_key(elem));
+
+void
+node_anim_scaling_keys(aiNodeAnim *self)
+    PPCODE:
+        WRAP_ARRAY(aiVectorKey, self->mScalingKeys, self->mNumScalingKeys,
+                   from_ai_vector_key(elem));
+
+
 BOOT:
 {
     /* Prepare yourself for a boatload of constants. */
@@ -790,6 +976,11 @@ BOOT:
     IVCONST(AI_UVTRAFO_ROTATION);
     IVCONST(AI_UVTRAFO_SCALING);
     IVCONST(AI_UVTRAFO_TRANSLATION);
+    /* Animation behavior flags for pre and post states. */
+    IVCONST(aiAnimBehaviour_DEFAULT);
+    IVCONST(aiAnimBehaviour_CONSTANT);
+    IVCONST(aiAnimBehaviour_LINEAR);
+    IVCONST(aiAnimBehaviour_REPEAT);
     /* Component flags for removing the unneded ones. */
     IVCONST(aiComponent_NORMALS);
     IVCONST(aiComponent_TANGENTS_AND_BITANGENTS);
